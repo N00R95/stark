@@ -1,0 +1,10 @@
+export const RENTER_ACTIONS = {
+  // Authentication
+  REGISTER: 'REGISTER_RENTER',
+  LOGIN: 'LOGIN_RENTER',
+  LOGOUT: 'LOGOUT_RENTER',
+  
+  // Profile Management
+  UPDATE_PROFILE: 'UPDATE_RENTER_PROFILE',
+  VIEW_PROFILE: 'VIEW_RENTER_PROFILE',
+} 

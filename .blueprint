@@ -1,0 +1,23 @@
+created:
+    - database/factories/ProfileFactory.php
+    - database/factories/PropertyFactory.php
+    - database/factories/PropertyImageFactory.php
+    - database/factories/AmenityFactory.php
+    - database/factories/TourRequestFactory.php
+    - database/migrations/2024_11_16_041134_create_profiles_table.php
+    - database/migrations/2024_11_16_041135_create_properties_table.php
+    - database/migrations/2024_11_16_041136_create_property_images_table.php
+    - database/migrations/2024_11_16_041137_create_amenities_table.php
+    - database/migrations/2024_11_16_041138_create_tour_requests_table.php
+    - app/Models/Profile.php
+    - app/Models/Property.php
+    - app/Models/PropertyImage.php
+    - app/Models/Amenity.php
+    - app/Models/TourRequest.php
+models:
+    User: { name: string, email: string, email_verified_at: 'timestamp nullable default:NULL', password: string, remember_token: 'string:100 nullable default:NULL' }
+    Profile: { full_name: string, phone: string, email: string, type: 'enum:owner,renter default:owner', business_name: 'string nullable', business_license: 'string nullable', address: 'text nullable', relationships: { hasMany: Property } }
+    Property: { owner_id: id, title: string, description: text, type: 'enum:apartment,villa,floor,office default:apartment', price: double, bedrooms: integer, bathrooms: integer, area: integer, location: string, year_built: date, year: integer, furnished: 'enum:furnished,unfurnished default:furnished', booking_status: 'enum:booked,unbooked default:unbooked', relationships: { hasMany: 'PropertyImage,Amenity' } }
+    PropertyImage: { property_id: id, image: string }
+    Amenity: { property_id: id, title: string }
+    TourRequest: { property_id: id, owner_id: id, renter_id: id, tour_date: date, tour_time: string, status: 'enum:pending,approved,rejected default:pending' }

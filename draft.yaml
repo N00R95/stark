@@ -1,0 +1,50 @@
+models:
+  Profile:
+      full_name: string
+      phone: string
+      email: string
+      type: enum:owner,renter default:owner
+      business_name: string nullable
+      business_license: string nullable
+      address: text nullable
+      relationships:
+        hasMany: Property
+  Property:
+      owner_id: id
+      title: string
+      description: text
+      type: enum:apartment,villa,floor,office default:apartment
+      price: double
+      bedrooms: integer
+      bathrooms: integer
+      area: integer
+      location: string
+      year_built: date
+      year: integer
+      furnished: enum:furnished,unfurnished default:furnished
+      booking_status: enum:booked,unbooked default:unbooked
+      relationships:
+        hasMany: PropertyImage,Amenity
+        # belongsTo: Profile
+  PropertyImage:
+      property_id: id
+      image: string
+      # relationships:
+      #   belongsTo: Property
+  Amenity:
+      property_id: id
+      title: string
+      # relationships:
+      #   belongsTo: Property
+  TourRequest:
+      property_id: id
+      owner_id: id
+      renter_id: id
+      tour_date: date
+      tour_time: string
+      status: enum:pending,approved,rejected default:pending
+      # relationships:
+      #   belongsTo: Property,Profile:owner_id,Profile:renter_id
+
+controllers:
+  # ...

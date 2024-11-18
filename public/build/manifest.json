@@ -1,0 +1,28 @@
+{
+  "resources/js/assets/logo-footer.jpg": {
+    "file": "assets/logo-footer-DooaD-Hu.jpg",
+    "src": "resources/js/assets/logo-footer.jpg"
+  },
+  "resources/js/assets/logo-nav.jpg": {
+    "file": "assets/logo-nav-9xhMEncz.jpg",
+    "src": "resources/js/assets/logo-nav.jpg"
+  },
+  "resources/js/assets/pic1.jpg": {
+    "file": "assets/pic1-ltIYY7rL.jpg",
+    "src": "resources/js/assets/pic1.jpg"
+  },
+  "resources/js/main.jsx": {
+    "file": "assets/main-4kx6Jom2.js",
+    "name": "main",
+    "src": "resources/js/main.jsx",
+    "isEntry": true,
+    "css": [
+      "assets/main-1dnAMvcl.css"
+    ],
+    "assets": [
+      "assets/logo-nav-9xhMEncz.jpg",
+      "assets/logo-footer-DooaD-Hu.jpg",
+      "assets/pic1-ltIYY7rL.jpg"
+    ]
+  }
+}
