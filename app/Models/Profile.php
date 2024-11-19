@@ -21,6 +21,15 @@ class Profile extends Model
         'type' => 'string'
     ];
 
+    /**
+     * The attributes that should be unique in combination.
+     *
+     * @var array
+     */
+    protected $uniqueKeys = [
+        ['phone', 'type']
+    ];
+
     public function user()
     {
         return $this->belongsTo(User::class);

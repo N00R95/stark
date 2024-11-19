@@ -1,0 +1,3 @@
+[33m236cd3d[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmain[m[33m)[m Complete OTP authentication with Twilio: - Add phone number validation - Implement OTP sending and verification - Add multi-profile support (owner/renter) - Add proper error handling and logging - Update frontend components for OTP flow
+[33m2d0c00c[m first commit
+[33m4300193[m Add property management features

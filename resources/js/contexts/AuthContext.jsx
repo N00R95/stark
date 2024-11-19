@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useCallback } from 'react'
 import { authAPI } from '../services/api'
 import { useNavigate, useLocation } from 'react-router-dom'
 
@@ -14,7 +14,7 @@ export function AuthProvider({ children }) {
     const checkAuth = async (type = null) => {
         try {
             const storedType = localStorage.getItem('userType') || type;
-            
+
             const response = await authAPI.checkAuth(storedType)
             if (response.success) {
                 setUser(response.user)
@@ -31,7 +31,7 @@ export function AuthProvider({ children }) {
             setUser(null)
             localStorage.removeItem('token')
             localStorage.removeItem('userType')
-            if (err.response?.status === 401) {
+            if (err.response?.status === 401 && !location.pathname.includes('/login')) {
                 navigate('/login')
             }
         } finally {
@@ -39,9 +39,16 @@ export function AuthProvider({ children }) {
         }
     }
 
+    const memoizedCheckAuth = useCallback(checkAuth, [navigate, location])
+
     useEffect(() => {
-        checkAuth()
-    }, [])
+        const token = localStorage.getItem('token')
+        if (token) {
+            memoizedCheckAuth()
+        } else {
+            setLoading(false)
+        }
+    }, [memoizedCheckAuth])
 
     const login = async (phone) => {
         try {

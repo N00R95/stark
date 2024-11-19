@@ -109,9 +109,14 @@ export default function Register({ language, userType }) {
                 type: userType
             }))
             setStep('otp')
+            alert(t.otpSent)
         }
     } catch (error) {
-        setError(error.response?.data?.message || error.message)
+        if (error.response?.data?.error_code === 'PROFILE_EXISTS') {
+            setError('An account with this phone number already exists. Please login instead.')
+        } else {
+            setError(error.response?.data?.message || 'Failed to send OTP')
+        }
     } finally {
         setIsLoading(false)
     }
@@ -126,34 +131,35 @@ export default function Register({ language, userType }) {
     setIsLoading(true)
     try {
         const savedData = JSON.parse(sessionStorage.getItem('registerData'))
-        const response = await authAPI.verifyRegisterOTP({
+        const response = await authAPI.registerVerifyOTP({
             full_name: savedData.name,
             email: savedData.email,
             phone: savedData.phone,
-            type: savedData.type,
+            type: userType,
+            business_name: savedData.businessName,
+            business_license: savedData.businessLicense,
             otp: otp
-        });
+        })
 
         if (response.success) {
             if (response.token) {
-                localStorage.setItem('token', response.token);
+                localStorage.setItem('token', response.token)
             }
-
-            await checkAuth();
-
+            await checkAuth()
             sessionStorage.removeItem('registerData')
-            if (savedData.type === 'renter') {
+
+            if (userType === 'renter') {
                 navigate('/properties/available')
             } else {
-                navigate('/owner/properties')
+                navigate('/owner/properties/add')
             }
         }
     } catch (error) {
-        console.error('OTP verification failed:', error);
+        console.error('OTP verification failed:', error)
         if (error.response?.data?.error_code === 'PROFILE_EXISTS') {
-            setError('An account with this phone number already exists. Please login instead.');
+            setError('An account with this phone number already exists. Please login instead.')
         } else {
-            setError(error.response?.data?.message || error.message || 'Invalid OTP');
+            setError(error.response?.data?.message || 'Invalid OTP')
         }
     } finally {
         setIsLoading(false)

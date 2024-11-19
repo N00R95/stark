@@ -11,6 +11,7 @@ use Illuminate\Validation\Rule;
 use Twilio\Rest\Client;
 use App\Services\TwilioHttpClient;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\DB;
 
 class AuthController extends Controller
 {
@@ -57,83 +58,48 @@ class AuthController extends Controller
 
             $phone = $request->phone;
 
-            // Log the request details
-            \Log::info('OTP Request', [
+            \Log::info('Sending OTP', [
                 'phone' => $phone,
-                'channel' => $request->channel,
-                'twilio_config' => [
-                    'account_sid_exists' => !empty(config('services.twilio.account_sid')),
-                    'auth_token_exists' => !empty(config('services.twilio.auth_token')),
-                    'verification_sid_exists' => !empty(config('services.twilio.verification_sid')),
-                ]
+                'channel' => $request->channel
             ]);
 
             try {
-                // Test Twilio connection first
-                $account = $this->twilio->account->fetch();
-                \Log::info('Twilio Account Status', [
-                    'type' => $account->type,
-                    'status' => $account->status
-                ]);
-
-                // Create verification
                 $verification = $this->twilio->verify->v2
                     ->services($this->verificationSid)
                     ->verifications
                     ->create($phone, $request->channel);
 
-                \Log::info('Verification Created', [
-                    'sid' => $verification->sid,
+                \Log::info('OTP Sent', [
                     'status' => $verification->status,
                     'phone' => $phone
                 ]);
 
                 return response()->json([
                     'success' => true,
-                    'message' => 'OTP sent successfully',
-                    'debug_info' => [
-                        'account_type' => $account->type,
-                        'account_status' => $account->status,
-                        'verification_sid' => $verification->sid
-                    ]
+                    'message' => 'OTP sent successfully'
                 ]);
 
-            } catch (\Twilio\Exceptions\RestException $e) {
-                \Log::error('Twilio API Error', [
-                    'code' => $e->getCode(),
-                    'message' => $e->getMessage(),
-                    'phone' => $phone,
-                    'details' => $e->getMessage()
+            } catch (\Exception $e) {
+                \Log::error('Twilio OTP Error', [
+                    'error' => $e->getMessage(),
+                    'phone' => $phone
                 ]);
 
                 return response()->json([
                     'success' => false,
-                    'message' => 'Failed to send OTP: ' . $e->getMessage(),
-                    'error_code' => $e->getCode(),
-                    'debug_info' => [
-                        'error_type' => get_class($e),
-                        'details' => $e->getMessage()
-                    ]
-                ], 400);
+                    'message' => 'Failed to send OTP: ' . $e->getMessage()
+                ], 500);
             }
 
         } catch (\Exception $e) {
-            \Log::error('General Error in getOTP', [
-                'message' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'file' => $e->getFile(),
-                'line' => $e->getLine()
+            \Log::error('OTP Request Error', [
+                'error' => $e->getMessage()
             ]);
 
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to send OTP: ' . $e->getMessage(),
-                'debug_info' => [
-                    'error_type' => get_class($e),
-                    'file' => $e->getFile(),
-                    'line' => $e->getLine()
-                ]
-            ], 500);
+                'message' => $e->getMessage()
+            ], 422);
         }
     }
 
@@ -203,87 +169,107 @@ class AuthController extends Controller
     {
         try {
             $request->validate([
-                'full_name' => 'required|string|max:255',
-                'email' => 'required|email',
                 'phone' => ['required', 'string', 'regex:/^\+966\d{9}$/'],
+                'otp' => 'required|string',
+                'full_name' => 'required|string',
+                'email' => 'required|email',
                 'type' => 'required|in:owner,renter',
-                'otp' => 'required|string|size:6'
+                'business_name' => 'nullable|string',
+                'business_license' => 'nullable|string'
             ]);
 
-            \Log::info('Register OTP Verification', [
-                'phone' => $request->phone,
-                'type' => $request->type
-            ]);
-
-            // Check if profile exists with same phone and type
+            // Check if profile already exists with this phone and type combination
             $existingProfile = Profile::where('phone', $request->phone)
                 ->where('type', $request->type)
                 ->first();
 
             if ($existingProfile) {
-                \Log::info('Duplicate profile attempt', [
-                    'phone' => $request->phone,
-                    'type' => $request->type,
-                    'existing_user_id' => $existingProfile->user_id
-                ]);
-
                 return response()->json([
                     'success' => false,
-                    'message' => "A {$request->type} profile with this phone number already exists. Please login instead.",
-                    'error_code' => 'PROFILE_EXISTS'
+                    'error_code' => 'PROFILE_EXISTS',
+                    'message' => 'An account with this phone number already exists for this user type. Please login instead.'
+                ], 409);
+            }
+
+            // Verify OTP first
+            try {
+                $verification = $this->twilio->verify->v2
+                    ->services($this->verificationSid)
+                    ->verificationChecks
+                    ->create([
+                        'to' => $request->phone,
+                        'code' => $request->otp
+                    ]);
+
+                if ($verification->status !== 'approved') {
+                    return response()->json([
+                        'success' => false,
+                        'message' => 'Invalid OTP'
+                    ], 400);
+                }
+            } catch (\Exception $e) {
+                \Log::error('OTP verification failed', [
+                    'error' => $e->getMessage(),
+                    'phone' => $request->phone
+                ]);
+                return response()->json([
+                    'success' => false,
+                    'message' => 'OTP verification failed'
                 ], 400);
             }
 
-            // Verify OTP
-            $verification_check = $this->twilio->verify->v2
-                ->services($this->verificationSid)
-                ->verificationChecks
-                ->create([
-                    'to' => $request->phone,
-                    'code' => $request->otp
-                ]);
+            DB::beginTransaction();
+            try {
+                // Find or create user
+                $user = User::firstOrCreate(
+                    ['email' => $request->email],
+                    [
+                        'name' => $request->full_name,
+                        'password' => Hash::make(Str::random(16))
+                    ]
+                );
 
-            if ($verification_check->status === 'approved') {
-                // Find existing user by phone number (across any type)
-                $existingUser = Profile::where('phone', $request->phone)
-                    ->first()?->user;
-
-                // If user exists, use that user, otherwise create new
-                $user = $existingUser ?? User::create([
-                    'name' => $request->full_name,
-                    'email' => $request->email,
-                    'password' => Hash::make(Str::random(16))
-                ]);
-
-                // Create new profile for this type
-                $profile = Profile::create([
+                // Create new profile
+                $profile = new Profile([
                     'user_id' => $user->id,
                     'full_name' => $request->full_name,
                     'phone' => $request->phone,
                     'email' => $request->email,
-                    'type' => $request->type,
-                    'business_name' => $request->business_name,
-                    'business_license' => $request->business_license
+                    'type' => $request->type
                 ]);
 
-                $token = $user->createToken('auth-token')->plainTextToken;
+                // Only add business fields if they are provided
+                if ($request->type === 'owner') {
+                    $profile->business_name = $request->business_name;
+                    $profile->business_license = $request->business_license;
+                }
+
+                $profile->save();
+
+                DB::commit();
+
+                // Generate token
+                $token = $user->createToken('auth_token')->plainTextToken;
 
                 return response()->json([
                     'success' => true,
+                    'message' => 'Registration successful',
                     'token' => $token,
-                    'user' => $user->load(['profile' => function($query) use ($request) {
-                        $query->where('type', $request->type);
-                    }])
+                    'user' => [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'profile' => $profile
+                    ]
                 ]);
+
+            } catch (\Exception $e) {
+                DB::rollBack();
+                throw $e;
             }
 
-            return response()->json([
-                'success' => false,
-                'message' => 'Invalid OTP'
-            ], 400);
-
         } catch (\Exception $e) {
-            \Log::error('Registration failed', [
+            \Log::error('Registration failed:', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);

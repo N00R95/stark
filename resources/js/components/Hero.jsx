@@ -1,7 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import pic1 from '../assets/pic1.jpg'
 
-export default function Hero({ language }) {
+export default function Hero({ language = 'en' }) {
   const navigate = useNavigate()
 
   const content = {
@@ -21,14 +21,14 @@ export default function Hero({ language }) {
     }
   }
 
-  const t = content[language || 'en'] || content['en']
+  const t = content[language] || content['en']
 
   const handleButtonClick = (type) => {
     navigate(`/register/${type}`)
   }
 
   return (
-    <section 
+    <section
       className="py-8 md:py-16"
       style={{
         background: 'linear-gradient(90deg, #FFFFFF 0%, rgba(153, 109, 109, 0.2) 50%, #FFFFFF 100%)'
@@ -46,9 +46,9 @@ export default function Hero({ language }) {
           <div className="order-2 md:order-1 px-4 md:px-8">
             <div className="aspect-square bg-white/50 rounded-lg overflow-hidden shadow-lg backdrop-blur-sm">
               <div className="w-full h-full flex items-center justify-center">
-                <img 
-                  src={pic1} 
-                  alt="Real Estate" 
+                <img
+                  src={pic1}
+                  alt="Real Estate"
                   className="w-full h-full object-cover"
                   loading="eager" // Load hero image immediately
                 />
@@ -72,14 +72,14 @@ export default function Hero({ language }) {
 
               {/* Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">
-                <button 
-                  onClick={() => handleButtonClick('renter')} 
+                <button
+                  onClick={() => handleButtonClick('renter')}
                   className="w-full sm:w-auto bg-[#BE092B]/90 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-[#8a1328] transition-colors duration-200"
                 >
                   {t.renter}
                 </button>
-                <button 
-                  onClick={() => handleButtonClick('owner')} 
+                <button
+                  onClick={() => handleButtonClick('owner')}
                   className="w-full sm:w-auto bg-[#BE092B]/90 text-white px-6 py-3 rounded-lg text-sm font-medium hover:bg-[#8a1328] transition-colors duration-200"
                 >
                   {t.owner}
@@ -92,7 +92,3 @@ export default function Hero({ language }) {
     </section>
   )
 }
-
-Hero.defaultProps = {
-    language: 'en'
-};

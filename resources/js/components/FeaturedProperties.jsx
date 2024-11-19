@@ -140,7 +140,7 @@ export default function FeaturedProperties({ language }) {
             </span>
           )}
         </div>
-        <button 
+        <button
           className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors"
           onClick={(e) => {
             e.stopPropagation();
@@ -156,9 +156,9 @@ export default function FeaturedProperties({ language }) {
           <IoLocationOutline className="text-[#BE092B]" />
           <span>{property.location}</span>
         </div>
-        
+
         <h3 className="text-xl font-semibold mb-4 line-clamp-2 text-gray-800">{property.title}</h3>
-        
+
         <div className="flex items-center gap-4 mb-4 text-gray-600">
           {property.bedrooms !== undefined && (
             <div className="flex items-center gap-1">
@@ -180,7 +180,7 @@ export default function FeaturedProperties({ language }) {
 
         <div className="flex flex-wrap gap-2 mb-4">
           {property.amenities?.map((amenity, index) => (
-            <span 
+            <span
               key={index}
               className="text-xs px-2 py-1 bg-gray-50 text-gray-600 rounded-full border border-gray-100"
             >
@@ -253,4 +253,4 @@ export default function FeaturedProperties({ language }) {
       </div>
     </section>
   );
-} 
+}

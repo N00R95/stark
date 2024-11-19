@@ -84,7 +84,21 @@ export const authAPI = {
 
     registerVerifyOTP: async (data) => {
         try {
-            const response = await api.post(ENDPOINTS.AUTH.REGISTER_VERIFY_OTP, data);
+            const response = await api.post(ENDPOINTS.AUTH.REGISTER_VERIFY_OTP, {
+                full_name: data.full_name,
+                email: data.email,
+                phone: data.phone,
+                type: data.type,
+                business_name: data.business_name,
+                business_license: data.business_license,
+                otp: data.otp
+            });
+
+            if (response.data.token) {
+                localStorage.setItem('token', response.data.token);
+                localStorage.setItem('userType', data.type);
+            }
+
             return response.data;
         } catch (error) {
             throw error;
