@@ -15,14 +15,37 @@ class Property extends Model
         'description',
         'type',
         'price',
-        'location',
         'bedrooms',
         'bathrooms',
         'area',
-        'status'
+        'location',
+        'year_built',
+        'year',
+        'furnished',
+        'booking_status'
     ];
 
     protected $with = ['images', 'amenities'];
+
+    protected $casts = [
+        'price' => 'float',
+        'bedrooms' => 'integer',
+        'bathrooms' => 'integer',
+        'area' => 'integer',
+        'year' => 'integer',
+        'year_built' => 'date',
+    ];
+
+    protected $attributes = [
+        'booking_status' => 'unbooked',
+        'furnished' => 'unfurnished',
+        'bedrooms' => null
+    ];
+
+    public function savedBy()
+    {
+        return $this->belongsToMany(User::class, 'saved_properties');
+    }
 
     public function owner(): BelongsTo
     {
@@ -36,6 +59,6 @@ class Property extends Model
 
     public function amenities(): BelongsToMany
     {
-        return $this->belongsToMany(Amenity::class);
+        return $this->belongsToMany(Amenity::class, 'amenity_property', 'property_id', 'amenity_id');
     }
 }

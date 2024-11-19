@@ -1,5 +1,5 @@
 import axios from "axios";
-import { API_BASE_URL, ENDPOINTS } from '../config/api';
+import { API_BASE_URL, ENDPOINTS } from "../config/api";
 
 const api = axios.create({
     baseURL: API_BASE_URL,
@@ -15,9 +15,9 @@ api.interceptors.request.use(
     async (config) => {
         config.headers = {
             ...config.headers,
-            'Content-Type': 'application/json',
-            'Accept': 'application/json',
-            'X-Requested-With': 'XMLHttpRequest'
+            "Content-Type": "application/json",
+            Accept: "application/json",
+            "X-Requested-With": "XMLHttpRequest",
         };
 
         const token = localStorage.getItem("token");
@@ -47,15 +47,15 @@ export const authAPI = {
     sendOTP: async (data) => {
         try {
             let phone = data.phone;
-            if (!phone.startsWith('+')) {
-                phone = phone.startsWith('0')
-                    ? '+966' + phone.substring(1)
-                    : '+966' + phone;
+            if (!phone.startsWith("+")) {
+                phone = phone.startsWith("0")
+                    ? "+966" + phone.substring(1)
+                    : "+966" + phone;
             }
 
             const response = await api.post(ENDPOINTS.AUTH.SEND_OTP, {
                 phone: phone,
-                channel: 'sms'
+                channel: "sms",
             });
 
             return response.data;
@@ -69,11 +69,11 @@ export const authAPI = {
             const response = await api.post(ENDPOINTS.AUTH.VERIFY_OTP, {
                 phone: data.phone,
                 otp: data.otp,
-                type: data.type
+                type: data.type,
             });
 
             if (response.data.token) {
-                localStorage.setItem('token', response.data.token);
+                localStorage.setItem("token", response.data.token);
             }
 
             return response.data;
@@ -84,19 +84,22 @@ export const authAPI = {
 
     registerVerifyOTP: async (data) => {
         try {
-            const response = await api.post(ENDPOINTS.AUTH.REGISTER_VERIFY_OTP, {
-                full_name: data.full_name,
-                email: data.email,
-                phone: data.phone,
-                type: data.type,
-                business_name: data.business_name,
-                business_license: data.business_license,
-                otp: data.otp
-            });
+            const response = await api.post(
+                ENDPOINTS.AUTH.REGISTER_VERIFY_OTP,
+                {
+                    full_name: data.full_name,
+                    email: data.email,
+                    phone: data.phone,
+                    type: data.type,
+                    business_name: data.business_name,
+                    business_license: data.business_license,
+                    otp: data.otp,
+                }
+            );
 
             if (response.data.token) {
-                localStorage.setItem('token', response.data.token);
-                localStorage.setItem('userType', data.type);
+                localStorage.setItem("token", response.data.token);
+                localStorage.setItem("userType", data.type);
             }
 
             return response.data;
@@ -108,29 +111,29 @@ export const authAPI = {
     logout: async () => {
         try {
             const response = await api.post(ENDPOINTS.AUTH.LOGOUT);
-            localStorage.removeItem('token');
+            localStorage.removeItem("token");
             return response.data;
         } catch (error) {
-            localStorage.removeItem('token');
+            localStorage.removeItem("token");
             throw error;
         }
     },
 
     checkAuth: async (type = null) => {
         try {
-            const userType = type || localStorage.getItem('userType');
+            const userType = type || localStorage.getItem("userType");
             const response = await api.get(
-                `${ENDPOINTS.AUTH.USER}${userType ? `?type=${userType}` : ''}`
+                `${ENDPOINTS.AUTH.USER}${userType ? `?type=${userType}` : ""}`
             );
             return response.data;
         } catch (error) {
             if (error.response?.status === 401) {
-                localStorage.removeItem('token');
-                localStorage.removeItem('userType');
+                localStorage.removeItem("token");
+                localStorage.removeItem("userType");
             }
             throw error;
         }
-    }
+    },
 };
 
 export const propertyAPI = {
@@ -140,7 +143,7 @@ export const propertyAPI = {
                 headers: {
                     Accept: "application/json",
                     "Content-Type": "application/json",
-                }
+                },
             });
             return response.data;
         } catch (error) {
@@ -151,17 +154,23 @@ export const propertyAPI = {
 
     getAvailable: async (filters = {}) => {
         try {
+            console.log("Fetching properties with filters:", filters); // Debug log
             const response = await api.get("/properties", {
                 params: filters,
-                timeout: 10000,
-                headers: {
-                    Accept: "application/json",
-                    "Content-Type": "application/json",
-                },
+                timeout: 30000,
             });
+
+            console.log("API Response:", response.data); // Debug log
+
+            if (!response.data.success) {
+                throw new Error(
+                    response.data.message || "Failed to fetch properties"
+                );
+            }
+
             return response.data;
         } catch (error) {
-            console.error("Failed to fetch properties:", error);
+            console.error("API Error:", error);
             if (error.response?.data) {
                 throw error.response.data;
             }
@@ -171,11 +180,17 @@ export const propertyAPI = {
 
     getPropertyDetails: async (id) => {
         try {
+            console.log("Fetching property details for ID:", id);
             const response = await api.get(`/properties/${id}`);
+
+            if (!response.data.success) {
+                throw new Error(response.data.message);
+            }
+
             return response.data;
         } catch (error) {
             console.error("Failed to fetch property details:", error);
-            throw error;
+            throw error.response?.data || error;
         }
     },
 

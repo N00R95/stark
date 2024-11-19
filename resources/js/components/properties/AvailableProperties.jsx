@@ -42,7 +42,8 @@ export default function AvailableProperties({ language }) {
                 bedrooms: 'Bedrooms',
                 bathrooms: 'Bathrooms',
                 area: 'Area'
-            }
+            },
+            amenities: 'Amenities',
         },
         ar: {
             title: 'العقارات المتاحة',
@@ -63,7 +64,8 @@ export default function AvailableProperties({ language }) {
                 bedrooms: 'غرف النوم',
                 bathrooms: 'دورات المياه',
                 area: 'المساحة'
-            }
+            },
+            amenities: 'المرافق',
         }
     };
 
@@ -80,14 +82,15 @@ export default function AvailableProperties({ language }) {
             const response = await propertyAPI.getAvailable(filters);
 
             if (response.success && response.data) {
-                const propertyData = response.data.data || response.data;
-                setProperties(Array.isArray(propertyData) ? propertyData : []);
+                console.log('API Response:', response); // Debug log
+                const propertyData = Array.isArray(response.data) ? response.data : [];
+                setProperties(propertyData);
             } else {
                 throw new Error(response.message || 'Failed to fetch properties');
             }
         } catch (error) {
             console.error('Failed to fetch properties:', error);
-            setError(error.response?.data?.message || error.message || t.error);
+            setError(error.response?.data?.message || error.message || 'Failed to fetch properties');
             setProperties([]);
         } finally {
             setLoading(false);
@@ -189,11 +192,10 @@ export default function AvailableProperties({ language }) {
                                 {user && (
                                     <button
                                         onClick={() => handleSaveProperty(property.id)}
-                                        className={`absolute top-2 right-2 p-1.5 rounded-full shadow-sm ${
-                                            property.is_saved
+                                        className={`absolute top-2 right-2 p-1.5 rounded-full shadow-sm ${property.is_saved
                                                 ? 'bg-primary text-white'
                                                 : 'bg-white text-gray-600'
-                                        }`}
+                                            }`}
                                     >
                                         <FiHeart className={property.is_saved ? 'fill-current' : ''} size={16} />
                                     </button>
@@ -207,11 +209,34 @@ export default function AvailableProperties({ language }) {
                                     <span className="line-clamp-1">{property.location}</span>
                                 </div>
 
-                                <div className="grid grid-cols-3 gap-2 mb-3">
-                                    <div className="flex items-center gap-1 text-gray-600 text-sm">
-                                        <FiHome size={14} />
-                                        <span>{property.bedrooms}</span>
+                                {property.amenities && property.amenities.length > 0 && (
+                                    <div className="mb-3">
+                                        <h3 className="text-sm font-semibold text-gray-600 mb-1">{t.amenities}</h3>
+                                        <div className="flex flex-wrap gap-1">
+                                            {property.amenities.slice(0, 3).map((amenity) => (
+                                                <span
+                                                    key={amenity.id}
+                                                    className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded"
+                                                >
+                                                    {amenity.title}
+                                                </span>
+                                            ))}
+                                            {property.amenities.length > 3 && (
+                                                <span className="inline-block px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded">
+                                                    +{property.amenities.length - 3}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
+                                )}
+
+                                <div className="grid grid-cols-3 gap-2 mb-3">
+                                    {property.bedrooms && (
+                                        <div className="flex items-center gap-1 text-gray-600 text-sm">
+                                            <FiHome size={14} />
+                                            <span>{property.bedrooms}</span>
+                                        </div>
+                                    )}
                                     <div className="flex items-center gap-1 text-gray-600 text-sm">
                                         <FiDroplet size={14} />
                                         <span>{property.bathrooms}</span>

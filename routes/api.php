@@ -4,15 +4,17 @@ use App\Http\Controllers\API\AuthController;
 use App\Http\Controllers\API\PropertyController;
 use Illuminate\Support\Facades\Route;
 
-// Add this middleware group for all API routes
 Route::group(['middleware' => ['api']], function () {
+    // Public property routes - move these OUTSIDE the auth middleware
+    Route::get('/properties', [PropertyController::class, 'index']);
+    Route::get('/properties/{id}', [PropertyController::class, 'show']);
+
     // Auth routes
     Route::prefix('auth')->group(function () {
         Route::post('/send-otp', [AuthController::class, 'getOTP']);
         Route::post('/verify-otp', [AuthController::class, 'verifyOTP']);
         Route::post('/register/verify-otp', [AuthController::class, 'registerVerifyOTP']);
-        
-        // Protected auth routes
+
         Route::middleware('auth:sanctum')->group(function () {
             Route::post('/logout', [AuthController::class, 'logout']);
             Route::get('/user', [AuthController::class, 'user']);
@@ -21,26 +23,9 @@ Route::group(['middleware' => ['api']], function () {
 
     // Protected routes
     Route::middleware('auth:sanctum')->group(function () {
-        // Properties
         Route::get('properties/owner', [PropertyController::class, 'getOwnerProperties']);
-        Route::apiResource('properties', PropertyController::class);
         Route::post('properties/{id}/save', [PropertyController::class, 'toggleSave']);
-        
-        // Tours
-        Route::apiResource('tours', TourController::class);
-        Route::post('tours/{id}/cancel', [TourController::class, 'cancel']);
-        
-        // Bookings
-        Route::apiResource('bookings', BookingController::class);
-        Route::post('bookings/{id}/cancel', [BookingController::class, 'cancel']);
-        
-        // Saved Properties
-        Route::get('saved-properties', [PropertyController::class, 'saved']);
     });
-
-    // Public property routes
-    Route::get('/properties', [PropertyController::class, 'index']);
-    Route::get('/properties/{id}', [PropertyController::class, 'show']);
 });
 
 // Test route

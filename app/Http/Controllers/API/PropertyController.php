@@ -9,48 +9,68 @@ use Illuminate\Support\Facades\Log;
 
 class PropertyController extends Controller
 {
-    public function getOwnerProperties(Request $request)
+    public function index(Request $request)
     {
         try {
-            $user = $request->user();
-            
-            // Get owner profile
-            $ownerProfile = $user->profiles()
-                ->where('type', 'owner')
-                ->first();
+            $query = Property::with(['images', 'amenities', 'owner'])
+                ->where('booking_status', 'unbooked');  // Only show unbooked properties
 
-            if (!$ownerProfile) {
-                Log::error('Owner profile not found', [
-                    'user_id' => $user->id,
-                    'available_profiles' => $user->profiles->pluck('type')
-                ]);
-                
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Owner profile not found'
-                ], 404);
+            // Apply filters
+            if ($request->has('type') && $request->type !== 'all') {
+                $query->where('type', $request->type);
             }
 
-            $properties = Property::where('owner_id', $ownerProfile->id)
-                ->with(['images', 'amenities'])
-                ->orderBy('created_at', 'desc')
-                ->get();
+            if ($request->has('priceRange') && $request->priceRange !== 'all') {
+                list($min, $max) = explode('-', $request->priceRange);
+                $query->where('price', '>=', $min)
+                      ->where('price', '<=', $max);
+            }
 
-            Log::info('Owner properties fetched', [
-                'owner_id' => $ownerProfile->id,
-                'count' => $properties->count()
+            $properties = $query->latest()->get();
+
+            // Transform the properties to include necessary data
+            $properties = $properties->map(function ($property) {
+                return [
+                    'id' => $property->id,
+                    'title' => $property->title,
+                    'description' => $property->description,
+                    'type' => $property->type,
+                    'price' => $property->price,
+                    'bedrooms' => $property->bedrooms,
+                    'bathrooms' => $property->bathrooms,
+                    'area' => $property->area,
+                    'location' => $property->location,
+                    'images' => $property->images->pluck('image'),
+                    'amenities' => $property->amenities->map(function ($amenity) {
+                        return [
+                            'id' => $amenity->id,
+                            'title' => $amenity->title
+                        ];
+                    }),
+                    'owner' => [
+                        'name' => $property->owner->full_name,
+                        'phone' => $property->owner->phone,
+                    ],
+                    'booking_status' => $property->booking_status,
+                    'furnished' => $property->furnished,
+                ];
+            });
+
+            Log::info('Properties fetched successfully', [
+                'count' => $properties->count(),
+                'filters' => $request->all()
             ]);
 
             return response()->json([
                 'success' => true,
-                'properties' => $properties
+                'data' => $properties
             ]);
 
         } catch (\Exception $e) {
-            Log::error('Failed to fetch owner properties', [
+            Log::error('Property fetch failed', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
-                'user_id' => $request->user()?->id
+                'filters' => $request->all()
             ]);
 
             return response()->json([
@@ -60,58 +80,53 @@ class PropertyController extends Controller
         }
     }
 
-    public function index(Request $request)
-    {
-        try {
-            $query = Property::query()->with(['images', 'amenities']);
-
-            // Apply filters
-            if ($request->has('type')) {
-                $query->where('type', $request->type);
-            }
-
-            if ($request->has('min_price')) {
-                $query->where('price', '>=', $request->min_price);
-            }
-
-            if ($request->has('max_price')) {
-                $query->where('price', '<=', $request->max_price);
-            }
-
-            $properties = $query->orderBy('created_at', 'desc')->get();
-
-            return response()->json([
-                'success' => true,
-                'properties' => $properties
-            ]);
-
-        } catch (\Exception $e) {
-            Log::error('Failed to fetch properties', [
-                'error' => $e->getMessage()
-            ]);
-
-            return response()->json([
-                'success' => false,
-                'message' => 'Failed to fetch properties'
-            ], 500);
-        }
-    }
-
     public function show($id)
     {
         try {
-            $property = Property::with(['images', 'amenities', 'owner.profile'])
+            $property = Property::with(['images', 'amenities', 'owner'])
                 ->findOrFail($id);
+
+            // Transform the property data
+            $transformedProperty = [
+                'id' => $property->id,
+                'title' => $property->title,
+                'description' => $property->description,
+                'type' => $property->type,
+                'price' => $property->price,
+                'bedrooms' => $property->bedrooms,
+                'bathrooms' => $property->bathrooms,
+                'area' => $property->area,
+                'location' => $property->location,
+                'year_built' => $property->year_built,
+                'year' => $property->year,
+                'furnished' => $property->furnished,
+                'booking_status' => $property->booking_status,
+                'images' => $property->images->pluck('image'),
+                'amenities' => $property->amenities->map(function ($amenity) {
+                    return [
+                        'id' => $amenity->id,
+                        'title' => $amenity->title
+                    ];
+                }),
+                'owner' => [
+                    'name' => $property->owner->full_name,
+                    'phone' => $property->owner->phone,
+                    'email' => $property->owner->email,
+                ],
+                'created_at' => $property->created_at,
+                'updated_at' => $property->updated_at,
+            ];
 
             return response()->json([
                 'success' => true,
-                'property' => $property
+                'data' => $transformedProperty
             ]);
 
         } catch (\Exception $e) {
             Log::error('Failed to fetch property details', [
                 'error' => $e->getMessage(),
-                'property_id' => $id
+                'property_id' => $id,
+                'trace' => $e->getTraceAsString()
             ]);
 
             return response()->json([
@@ -153,4 +168,4 @@ class PropertyController extends Controller
             ], 500);
         }
     }
-} 
+}

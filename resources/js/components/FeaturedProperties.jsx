@@ -1,54 +1,31 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { propertyAPI } from '../services/api';
 import { FiMaximize, FiHeart } from 'react-icons/fi';
 import { IoBedOutline, IoWaterOutline, IoLocationOutline } from "react-icons/io5";
 
 export default function FeaturedProperties({ language }) {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
-  const [properties, setProperties] = useState([
-    {
-      id: 1,
-      title: language === 'en' ? 'Luxury Villa with Pool' : 'فيلا فاخرة مع مسبح',
-      location: language === 'en' ? 'Al Olaya, Riyadh' : 'العليا، الرياض',
-      price: '25,000',
-      bedrooms: 5,
-      bathrooms: 6,
-      area: 450,
-      type: 'villa',
-      image: 'https://placehold.co/600x400/png/white?text=Luxury+Villa',
-      isNew: true,
-      isFeatured: true,
-      amenities: ['pool', 'garden', 'security', 'parking']
-    },
-    {
-      id: 2,
-      title: language === 'en' ? 'Modern Office Space' : 'مكتب عصري',
-      location: language === 'en' ? 'King Fahd Road, Riyadh' : 'طريق الملك فهد، الرياض',
-      price: '35,000',
-      area: 300,
-      type: 'office',
-      image: 'https://placehold.co/600x400/png/white?text=Modern+Office',
-      isNew: true,
-      isFeatured: true,
-      amenities: ['parking', 'security', 'reception']
-    },
-    {
-      id: 3,
-      title: language === 'en' ? 'Beachfront Apartment' : 'شقة على البحر',
-      location: language === 'en' ? 'Corniche, Jeddah' : 'الكورنيش، جدة',
-      price: '18,000',
-      bedrooms: 3,
-      bathrooms: 4,
-      area: 220,
-      type: 'apartment',
-      image: 'https://placehold.co/600x400/png/white?text=Beachfront+Apartment',
-      isNew: false,
-      isFeatured: true,
-      amenities: ['gym', 'pool', 'security']
-    },
-    // Add more properties...
-  ]);
+  const [properties, setProperties] = useState([]);
+
+  useEffect(() => {
+    fetchFeaturedProperties();
+  }, []);
+
+  const fetchFeaturedProperties = async () => {
+    try {
+      const response = await propertyAPI.getAvailable();
+      if (response.success && response.data) {
+        // Get first 3 properties
+        setProperties(response.data.slice(0, 3));
+      }
+    } catch (error) {
+      console.error('Failed to fetch featured properties:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const content = {
     en: {
@@ -113,33 +90,14 @@ export default function FeaturedProperties({ language }) {
 
   const t = content[language || 'en'] || content['en'];
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 1500);
-    return () => clearTimeout(timer);
-  }, []);
-
   const PropertyCard = ({ property }) => (
     <div className="bg-white rounded-lg overflow-hidden shadow-md hover:shadow-lg transition-all duration-300 border border-gray-100">
       <div className="relative">
         <img
-          src={property.image}
+          src={property.images[0] || 'https://placehold.co/600x400/png/white?text=Property'}
           alt={property.title}
           className="w-full h-64 object-cover transition-transform duration-300 hover:scale-105"
         />
-        <div className="absolute top-4 left-4 flex gap-2">
-          {property.isNew && (
-            <span className="bg-[#BE092B]/90 text-white px-3 py-1 rounded-full text-sm font-medium">
-              {t.new}
-            </span>
-          )}
-          {property.isFeatured && (
-            <span className="bg-[#BE092B]/90 text-white px-3 py-1 rounded-full text-sm font-medium">
-              {t.featured}
-            </span>
-          )}
-        </div>
         <button
           className="absolute top-4 right-4 p-2 bg-white rounded-full shadow-md hover:bg-gray-50 transition-colors"
           onClick={(e) => {
@@ -160,13 +118,13 @@ export default function FeaturedProperties({ language }) {
         <h3 className="text-xl font-semibold mb-4 line-clamp-2 text-gray-800">{property.title}</h3>
 
         <div className="flex items-center gap-4 mb-4 text-gray-600">
-          {property.bedrooms !== undefined && (
+          {property.bedrooms !== null && (
             <div className="flex items-center gap-1">
               <IoBedOutline className="text-[#BE092B]" />
               <span>{property.bedrooms}</span>
             </div>
           )}
-          {property.bathrooms !== undefined && (
+          {property.bathrooms && (
             <div className="flex items-center gap-1">
               <IoWaterOutline className="text-[#BE092B]" />
               <span>{property.bathrooms}</span>
@@ -178,16 +136,23 @@ export default function FeaturedProperties({ language }) {
           </div>
         </div>
 
-        <div className="flex flex-wrap gap-2 mb-4">
-          {property.amenities?.map((amenity, index) => (
-            <span
-              key={index}
-              className="text-xs px-2 py-1 bg-gray-50 text-gray-600 rounded-full border border-gray-100"
-            >
-              {t.amenities[amenity] || amenity}
-            </span>
-          ))}
-        </div>
+        {property.amenities && property.amenities.length > 0 && (
+          <div className="flex flex-wrap gap-2 mb-4">
+            {property.amenities.slice(0, 3).map((amenity) => (
+              <span
+                key={amenity.id}
+                className="text-xs px-2 py-1 bg-gray-50 text-gray-600 rounded-full border border-gray-100"
+              >
+                {amenity.title}
+              </span>
+            ))}
+            {property.amenities.length > 3 && (
+              <span className="text-xs px-2 py-1 bg-gray-50 text-gray-600 rounded-full border border-gray-100">
+                +{property.amenities.length - 3}
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="flex justify-between items-center pt-4 border-t border-gray-100">
           <div>
